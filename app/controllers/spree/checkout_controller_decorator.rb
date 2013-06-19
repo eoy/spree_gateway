@@ -16,15 +16,15 @@ module Spree
         payment.pend!
       end
 
-      # @order.state = "complete" # HARDCODE WARNING
-      until @order.state == "complete"
-        if @order.update!
-          # state_callback(:after)
-        else
-          flash[:error] = I18n.t(:payment_processing_failed)
-          redirect_to checkout_state_path(@order.state) and return
+      #@order.update!
+      #@order.state = "complete" # HARDCODE WARNING
+        until @order.state == "complete"
+          if @order.next!
+            @order.update!
+            state_callback(:after)
+          end
+          # @order.update!
         end
-      end
 
       if @order.state == "complete" or @order.completed?
         flash[:notice] = I18n.t(:order_processed_successfully)

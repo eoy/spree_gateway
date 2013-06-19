@@ -1,6 +1,10 @@
 module ActiveMerchant #:nodoc:
   module Billing #:nodoc:
     class Verkkomaksut < Gateway
+
+      def self.notification(post)
+        Notification.new(post)
+      end  
       
       def fields(opts)
         hash = {
