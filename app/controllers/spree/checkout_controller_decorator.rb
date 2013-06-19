@@ -1,6 +1,39 @@
 module Spree
   CheckoutController.class_eval do
     before_filter :confirm_skrill, :only => [:update]
+    before_filter :confirm_paytrail, :only => [:update]
+
+    def paytrail_return
+      unless @order.payments.where(:source_type => 'Spree::PaytrailTransaction').present?
+        payment_method = PaymentMethod.find(params[:payment_method_id])
+        paytrail_transaction = PaytrailTransaction.new
+
+        payment = @order.payments.create({:amount => @order.total,
+                                         :source => paytrail_transaction,
+                                         :payment_method => payment_method},
+                                         :without_protection => true)
+        payment.started_processing!
+        payment.pend!
+      end
+
+      # @order.state = "complete" # HARDCODE WARNING
+      until @order.state == "complete"
+        if @order.update!
+          # state_callback(:after)
+        else
+          flash[:error] = I18n.t(:payment_processing_failed)
+          redirect_to checkout_state_path(@order.state) and return
+        end
+      end
+
+      if @order.state == "complete" or @order.completed?
+        flash[:notice] = I18n.t(:order_processed_successfully)
+        flash[:commerce_tracking] = "nothing special"
+        redirect_to completion_route
+      else
+        redirect_to checkout_state_path(@order.state)
+      end
+    end
 
     def skrill_return
 
@@ -22,6 +55,7 @@ module Spree
           state_callback(:after)
         end
       end
+
       flash.notice = t(:order_processed_successfully)
       redirect_to completion_route
     end
@@ -43,5 +77,26 @@ module Spree
       end
     end
 
+    def confirm_skrill
+      return unless (params[:state] == "payment") && params[:order][:payments_attributes]
+
+      payment_method = PaymentMethod.find(params[:order][:payments_attributes].first[:payment_method_id])
+      if payment_method.kind_of?(BillingIntegration::Skrill::QuickCheckout)
+        #TODO confirming payment method
+        redirect_to edit_order_checkout_url(@order, :state => 'payment'),
+                    :notice => t(:complete_skrill_checkout)
+      end
+    end
+
+    def confirm_paytrail
+      return unless (params[:state] == "payment") && params[:order][:payments_attributes]
+
+      payment_method = PaymentMethod.find(params[:order][:payments_attributes].first[:payment_method_id])
+      if payment_method.kind_of?(BillingIntegration::Paytrail::PaytrailCheckout)
+        #TODO confirming payment method
+        redirect_to edit_order_checkout_url(@order, :state => 'payment'),
+                    :notice => t(:complete_skrill_checkout)
+      end
+    end
   end
 end

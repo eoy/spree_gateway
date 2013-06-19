@@ -1,15 +1,16 @@
 module Spree
-  class BillingIntegration::Skrill::QuickCheckout < BillingIntegration
+  class BillingIntegration::Paytrail::PaytrailCheckout < BillingIntegration
     preference :merchant_id, :string
+    preference :merchant_secret, :string
     preference :language, :string, :default => 'EN'
     preference :currency, :string, :default => 'EUR'
     preference :payment_options, :string, :default => 'ACC'
 
-    attr_accessible :preferred_merchant_id, :preferred_language, :preferred_currency,
+    attr_accessible :preferred_merchant_id, :preferred_merchant_secret, :preferred_language, :preferred_currency,
                     :preferred_payment_options, :preferred_server, :preferred_test_mode
 
     def provider_class
-      ActiveMerchant::Billing::Skrill
+      ActiveMerchant::Billing::Verkkomaksut
     end
 
     def redirect_url(order, opts = {})
@@ -21,7 +22,6 @@ module Spree
       opts[:detail1_description] = "Order:"
 
       opts[:pay_from_email] = order.email
-      opts[:description] = order.description
       opts[:firstname] = order.bill_address.firstname
       opts[:lastname] = order.bill_address.lastname
       opts[:address] = order.bill_address.address1
@@ -37,8 +37,8 @@ module Spree
       opts[:platform] = 'Spree'
       opts[:order_id] = order.number
 
-      skrill = self.provider
-      skrill.payment_url(opts)
+      paytrail = self.provider
+      paytrail.payment_url(opts)
     end
 
     private

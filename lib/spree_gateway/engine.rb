@@ -26,6 +26,7 @@ module SpreeGateway
         app.config.spree.payment_methods << Spree::Gateway::Banwire
         app.config.spree.payment_methods << Spree::Gateway::UsaEpay
         app.config.spree.payment_methods << Spree::BillingIntegration::Skrill::QuickCheckout
+        app.config.spree.payment_methods << Spree::BillingIntegration::Paytrail::PaytrailCheckout
         app.config.spree.payment_methods << Spree::Gateway::BalancedGateway
         app.config.spree.payment_methods << Spree::Gateway::DataCash
     end
