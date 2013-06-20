@@ -1,8 +1,8 @@
 module Spree
   class PaytrailStatusController < ApplicationController
     def update
-      @order = Order.find_by_number!(params[:order_id])
-      payment_method = PaymentMethod.find(params[:payment_method_id])
+      @order = Order.find_by_number!(params[:ORDER_NUMBER])
+      #payment_method = PaymentMethod.find(params[:METHOD])
       paytrail_transaction = PaytrailTransaction.create_from_postback params
 
       payment = @order.payments.where(:state => "pending",

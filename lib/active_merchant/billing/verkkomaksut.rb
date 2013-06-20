@@ -4,8 +4,8 @@ module ActiveMerchant #:nodoc:
 
       def self.notification(post)
         Notification.new(post)
-      end  
-      
+      end
+
       def fields(opts)
         hash = {
           TYPE: "S1",

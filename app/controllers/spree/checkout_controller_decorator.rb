@@ -3,7 +3,18 @@ module Spree
     before_filter :confirm_skrill, :only => [:update]
     before_filter :confirm_paytrail, :only => [:update]
 
+    def success?(params)
+      params['PAID'] != "0000000000"
+    end
+
+    def acknowledge(authcode)
+      return_authcode = [params["ORDER_NUMBER"], params["TIMESTAMP"], params["PAID"], params["METHOD"], authcode].join("|")
+      Digest::MD5.hexdigest(return_authcode).upcase == params["RETURN_AUTHCODE"]
+    end
+
     def paytrail_return
+
+      # Create new payment if no payment already exists
       unless @order.payments.where(:source_type => 'Spree::PaytrailTransaction').present?
         payment_method = PaymentMethod.find(params[:payment_method_id])
         paytrail_transaction = PaytrailTransaction.new
@@ -16,15 +27,30 @@ module Spree
         payment.pend!
       end
 
-      #@order.update!
-      #@order.state = "complete" # HARDCODE WARNING
-        until @order.state == "complete"
-          if @order.next!
-            @order.update!
-            state_callback(:after)
-          end
-          # @order.update!
-        end
+      payment_method = PaymentMethod.find(params[:payment_method_id])
+      payment = @order.payments.where(:state => "pending",
+                                      :payment_method_id => payment_method).first
+
+      if payment
+        payment.save
+      else
+        paytrail_transaction = PaytrailTransaction.new
+        payment = @order.payments.create({:amount => @order.total,
+                                         :source => paytrail_transaction,
+                                         :payment_method => payment_method},
+                                         :without_protection => true)
+      end
+
+      # Check if the code from Paytrail is for success
+      unless success?(params) && acknowledge("6pKF4jkv97zmqBJ3ZL8gUw5DfT2NMQ")
+        payment.failure!
+        redirect_to checkout_state_path(@order.state)
+      else
+        payment.complete!
+        @order.update!
+        @order.state = "complete"
+        @order.save!
+      end
 
       if @order.state == "complete" or @order.completed?
         flash[:notice] = I18n.t(:order_processed_successfully)
