@@ -2,10 +2,6 @@ module ActiveMerchant #:nodoc:
   module Billing #:nodoc:
     class Verkkomaksut < Gateway
 
-      def self.notification(post)
-        Notification.new(post)
-      end
-
       def fields(opts)
         hash = {
           TYPE: "S1",
@@ -24,13 +20,13 @@ module ActiveMerchant #:nodoc:
           GROUP: "",
           CURRENCY: opts[:currency],
           AMOUNT: opts[:amount]
-          # CONTACT_EMAIL: "user@example.com", # TODO
+          # CONTACT_EMAIL: "user@example.com",
           # CONTACT_FIRSTNAME: opts[:firstname],
           # CONTACT_LASTNAME: opts[:lastname],
           # CONTACT_ADDR_STREET: opts[:address],
           # CONTACT_ADDR_ZIP: opts[:zipcode],
           # CONTACT_ADDR_CITY: opts[:city],
-          # CONTACT_ADDR_COUNTRY: "FI", # TODO
+          # CONTACT_ADDR_COUNTRY: "FI",
           # INCLUDE_VAT: 1,
         }
         return hash

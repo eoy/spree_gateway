@@ -12,8 +12,12 @@ module Spree
       Digest::MD5.hexdigest(return_authcode).upcase == params["RETURN_AUTHCODE"]
     end
 
-    def paytrail_return
+    def secret
+      # Defined in admin interface
+      Spree::BillingIntegration::Paytrail::PaytrailCheckout.first.preferences[:merchant_secret]
+    end
 
+    def paytrail_return
       # Create new payment if no payment already exists
       unless @order.payments.where(:source_type => 'Spree::PaytrailTransaction').present?
         payment_method = PaymentMethod.find(params[:payment_method_id])
@@ -31,9 +35,7 @@ module Spree
       payment = @order.payments.where(:state => "pending",
                                       :payment_method_id => payment_method).first
 
-      if payment
-        payment.save
-      else
+      unless payment
         paytrail_transaction = PaytrailTransaction.new
         payment = @order.payments.create({:amount => @order.total,
                                          :source => paytrail_transaction,
@@ -41,8 +43,8 @@ module Spree
                                          :without_protection => true)
       end
 
-      # Check if the code from Paytrail is for success
-      unless success?(params) && acknowledge("6pKF4jkv97zmqBJ3ZL8gUw5DfT2NMQ")
+      # Check if the auth-code returned from Paytrail is valid
+      unless success?(params) && acknowledge(secret)
         payment.failure!
         redirect_to checkout_state_path(@order.state)
       else
@@ -62,7 +64,6 @@ module Spree
     end
 
     def skrill_return
-
       unless @order.payments.where(:source_type => 'Spree::SkrillTransaction').present?
         payment_method = PaymentMethod.find(params[:payment_method_id])
         skrill_transaction = SkrillTransaction.new
@@ -91,17 +92,12 @@ module Spree
       redirect_to edit_order_path(@order)
     end
 
-    private
-    def confirm_skrill
-      return unless (params[:state] == "payment") && params[:order][:payments_attributes]
-
-      payment_method = PaymentMethod.find(params[:order][:payments_attributes].first[:payment_method_id])
-      if payment_method.kind_of?(BillingIntegration::Skrill::QuickCheckout)
-        #TODO confirming payment method
-        redirect_to edit_order_checkout_url(@order, :state => 'payment'),
-                    :notice => t(:complete_skrill_checkout)
-      end
+    def paytrail_cancel
+      flash[:error] = t(:payment_has_been_cancelled)
+      redirect_to edit_order_path(@order)
     end
+
+    private
 
     def confirm_skrill
       return unless (params[:state] == "payment") && params[:order][:payments_attributes]
